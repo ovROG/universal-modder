@@ -152,8 +152,8 @@ blue-grey tint), since their real look comes from environment maps and the cloak
 ### Suit values from cfg, Lua and the console
 The suit cvars are registered in code with their defaults, and that code is encrypted on disk (Gotcha 5). The
 plain-text cfg files override some of them at start-up or level load; the rest keep their code defaults, which
-only the running game shows. Both sets were read from the running game's console (below) and match the files.
-Read from the shipped files:
+only the running game shows. Both sets were read from the running game's console (below), and every cfg-set
+value matched its file; the difficulty cfgs were only checked on Easy (Verification). Read from the shipped files:
 
 | Value | Source |
 |---|---|
@@ -164,7 +164,7 @@ Read from the shipped files:
 | Armor: a full bar soaks 125 HP (1.6 energy per HP); at least 30% of every hit is absorbed, even at 0 energy; armor mode drains 4 energy/s | `g_suitArmorHealthValue`, `g_suitArmorModeEnergyDrain` in `common.cfg`; the absorption rule in `SinglePlayer.lua` (mode 3 = armor) |
 | Speed sprint: 24 energy/s, ×3 speed (×3 on low energy, ×1.8 when empty), ramp 3/s. Fleet sets 20 energy/s and ×2.5 / ×2.5 / ×1.1, which are the code defaults apart from the energy (22) | `g_suitSpeedEnergyConsumption`, `g_suitSprintMultiplier_speedMode_*`, `g_suitSprintAcceleration` in `Game\Levels\LevelDefaults.cfg` (applied on every level load) and `Levels\fleet\level.cfg` |
 | Power melee ×1.4 (full and low energy alike) | `g_suitPowerMeleeScaleDamageWhenFullEnergy` / `...LowEnergy` in `common.cfg` |
-| Cloak: 10 energy/s base drain for the player's cloak type 1 | `cloakEnergyCost` in `scripts/Entities/actor/BasicActor.lua`; the player picks type 1 in `player.lua` |
+| Cloak: `cloakEnergyCost` 10 for the player's cloak type 1; how that becomes energy per second is an open question | `cloakEnergyCost` in `scripts/Entities/actor/BasicActor.lua`; the player picks type 1 in `player.lua` |
 | Cloak energy drained per damage taken: 33 (Normal, Hard), 1 (Easy), 50 (Delta) | `g_suitCloakEnergyDrainWhenDamaged` in `diff_*.cfg`; its help text says energy per point of damage (see Open questions) |
 | AI cloak detection: Easy 2/4, Normal 2.5/4.5, Hard 3/5, Delta 3/5.5 m | `ai_CloakMinDist` / `ai_CloakMaxDist` in `diff_*.cfg` |
 | Base punch: 245 damage (player), 30 for AI | `scripts/Entities/Items/XML/Weapons/Fists.xml` |
@@ -178,7 +178,8 @@ No file changes are needed. This is what worked:
 1. With Steam running, start `Bin64\CrysisRemastered.exe -devmode` from your own install (Steam DRM runs as
    usual). The console wasn't tried without `-devmode`.
 2. Open the console with `~`. The game reads keyboard input by scan code, so an agent has to send scan codes
-   (WinDrive `scanmode on`, `~` = VK 0xC0); virtual-key events are ignored (Gotcha 10).
+   (WinDrive `scanmode on`, `~` = VK 0xC0 on a US layout, the key below Esc); virtual-key events are ignored
+   (Gotcha 10). WinDrive drives the real keyboard, so ask the human first, and not while they're typing.
 3. Type a cvar name and press Enter. The console and `Game.log` (install root) print `name = value [flags]`.
    Several names on one line separated by `;` all print, so about 70 cvars fit in 9 lines. `name ?` prints
    the help text. Read `Game.log` rather than screenshots.
@@ -251,8 +252,9 @@ Multiplayer variants (`...Multiplayer`): energy recharge 20 s, speed 50 energy/s
    characters. **Fix:** match by prefix, or truncate your lookup names to 29 characters.
 10. **The console doesn't open, or typed text doesn't arrive, when an agent drives the game.** **Cause:** the
     game reads the keyboard by scan code and ignores virtual-key events. **Fix:** send scan codes (WinDrive
-    `scanmode on`, then `key 0xC0` for `~`, `type ...`, `key 0x0D`). A human typing on the keyboard has no
-    such problem.
+    `scanmode on`, then `key 0xC0` for `~`, `type ...`, `key 0x0D`). `type` sends Unicode characters in either
+    mode and the console takes them, so only `~` and Enter need scan codes. A human typing on the keyboard has
+    no such problem.
 11. **`Unknown command` for some names found in `.rdata`.** `g_playerSuitHealthRechargeTime`,
     `...HealthRechargeTimeMoving` and `g_AiSuitHealthRechargeTime` are in the exe's strings but aren't cvars.
     **Fix:** take names from the console's own reply; a name that prints `name = value` exists.
@@ -296,7 +298,10 @@ Multiplayer variants (`...Multiplayer`): energy recharge 20 s, speed 50 energy/s
   damage taken when in cloak mode". At 33 on Normal, about 6 HP of damage would empty a full bar of 200, so a
   hit breaks the cloak almost at once. That reading fits the help text but wasn't measured in play.
 - How `g_suitCloakEnergyDrainAdjuster` 0.73 combines with `cloakEnergyCost` 10 (for example 7.3 energy/s, or
-  only while moving). Timing a full bar in cloak, standing and moving, would settle it.
+  only while moving). In the original Crysis's Mod SDK (`NanoSuit.cpp`), the drain per second is
+  `cloakEnergyCost × adjuster × (horizontal speed × 0.5)`, at least 1, and ×8 in free fall, so movement is the
+  moving factor there. Whether Remastered kept that formula wasn't checked; timing a full bar in cloak, standing
+  and moving, would settle it.
 - Whether the speed multiplier ×3 replaces or stacks with the base `sprintMultiplier` 1.5 in `player.lua`. The
   help texts say "sprint speed multiplier when in ... mode", which suggests it replaces the base one; not
   measured.
